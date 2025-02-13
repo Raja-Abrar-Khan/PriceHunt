@@ -10,76 +10,60 @@ app = Flask(__name__)
 
 # **Setup Selenium with Headless Chrome**
 options = webdriver.ChromeOptions()
-options.add_argument("--headless")  
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--headless")  # Run without GUI for speed
+options.add_argument("--no-sandbox")  # Required for some environments
+options.add_argument("--disable-dev-shm-usage")  # Fix resource issues
 options.add_argument("start-maximized")
 options.add_argument("disable-infobars")
 options.add_argument("--disable-blink-features=AutomationControlled")
 
-# Start WebDriver globally
+# Start the WebDriver **globally** for faster scraping
 service = Service(ChromeDriverManager().install())
 driver = webdriver.Chrome(service=service, options=options)
 
 
-def scrape_amazon(product_name):
-    """Scrape Amazon search results for multiple products."""
-    url = f"https://www.amazon.in/s?k={product_name.replace(' ', '+')}"
+def scrape_product_details(url):
+    """Scrape product details (title, price, image) from Amazon or Flipkart."""
     driver.get(url)
 
-    products = []
     try:
-        WebDriverWait(driver, 5).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.s-main-slot div[data-component-type='s-search-result']"))
-        )
-        product_elements = driver.find_elements(By.CSS_SELECTOR, "div.s-main-slot div[data-component-type='s-search-result']")[:5]
+        # **Wait until the title is loaded**
+        title = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.TAG_NAME, "h1"))
+        ).text
 
-        for item in product_elements:
-            try:
-                title = item.find_element(By.CSS_SELECTOR, "h2 a span").text
-                price_element = item.find_elements(By.CSS_SELECTOR, ".a-price span.a-offscreen")
-                price = price_element[0].text.replace("₹", "").replace(",", "").strip() if price_element else "N/A"
-                image = item.find_element(By.CSS_SELECTOR, "img").get_attribute("src")
-                link = "https://www.amazon.in" + item.find_element(By.CSS_SELECTOR, "h2 a").get_attribute("href")
+        # **Wait for price to load**
+        try:
+            if "amazon" in url:
+                price_element = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "a-price"))
+                )
+                price = price_element.text.replace("₹", "").replace(",", "").strip()
+            elif "flipkart" in url:
+                price_element = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "_30jeq3"))
+                )
+                price = price_element.text.replace("₹", "").replace(",", "").strip()
+            else:
+                price = "0"
+            price = int(float(price))  # Convert to number
+        except Exception:
+            price = 0  # Default if not found
 
-                products.append({"title": title, "price": price, "image": image, "url": link})
-            except Exception as e:
-                print(f"Skipping Amazon product due to error: {e}")
+        # **Scrape Image**
+        try:
+            image_element = driver.find_element(By.TAG_NAME, "img")
+            image = image_element.get_attribute("src")
+            if not image:
+                image = image_element.get_attribute("data-src")  # Try lazy-loaded images
+        except Exception:
+            image = ""
+
+        return {"title": title, "price": price, "image": image, "url": url}
 
     except Exception as e:
-        print(f"Amazon scraping failed: {e}")
-
-    return products
-
-
-def scrape_flipkart(product_name):
-    """Scrape Flipkart search results for multiple products."""
-    url = f"https://www.flipkart.com/search?q={product_name.replace(' ', '%20')}"
-    driver.get(url)
-
-    products = []
-    try:
-        WebDriverWait(driver, 5).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div._1AtVbE"))
-        )
-        product_elements = driver.find_elements(By.CSS_SELECTOR, "div._1AtVbE")[:5]
-
-        for item in product_elements:
-            try:
-                title = item.find_element(By.CSS_SELECTOR, "a.IRpwTa").text
-                price_element = item.find_elements(By.CSS_SELECTOR, "div._30jeq3")
-                price = price_element[0].text.replace("₹", "").replace(",", "").strip() if price_element else "N/A"
-                image = item.find_element(By.CSS_SELECTOR, "img").get_attribute("src")
-                link = "https://www.flipkart.com" + item.find_element(By.CSS_SELECTOR, "a.IRpwTa").get_attribute("href")
-
-                products.append({"title": title, "price": price, "image": image, "url": link})
-            except Exception as e:
-                print(f"Skipping Flipkart product due to error: {e}")
-
-    except Exception as e:
-        print(f"Flipkart scraping failed: {e}")
-
-    return products
+        print(f"Error scraping {url}: {e}")
+        return None
 
 
 @app.route("/scrape", methods=["GET"])
@@ -88,11 +72,23 @@ def scrape():
     if not product_name:
         return jsonify({"error": "Product name is required"}), 400
 
-    amazon_products = scrape_amazon(product_name)
-    flipkart_products = scrape_flipkart(product_name)
+    urls = [
+        f"https://www.amazon.in/s?k={product_name.replace(' ', '+')}",
+        f"https://www.flipkart.com/search?q={product_name.replace(' ', '%20')}",
+    ]
 
-    return jsonify({"amazon": amazon_products, "flipkart": flipkart_products})
+    products = []
+    for url in urls:
+        product = scrape_product_details(url)
+        if product:
+            products.append(product)
+
+    if not products:
+        return jsonify({"error": "Failed to scrape product details"}), 500
+
+    return jsonify(products)
 
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
+
