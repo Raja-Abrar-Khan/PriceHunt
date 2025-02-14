@@ -32,7 +32,7 @@ def scrape_product_details(url):
             EC.presence_of_element_located((By.TAG_NAME, "h1"))
         ).text
 
-        # **Wait for price to load**
+        # **Wait for price to load**kjhk
         try:
             if "amazon" in url:
                 price_element = WebDriverWait(driver, 5).until(
