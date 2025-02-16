@@ -28,12 +28,15 @@ def scrape_product(url):
         if "amazon" in url:
             title = driver.find_element(By.ID, "productTitle").text.strip()
             price = driver.find_element(By.CSS_SELECTOR, ".a-price-whole").text.strip()
+            image = driver.find_element(By.CSS_SELECTOR, "#landingImage").get_attribute("src")
+
         elif "flipkart" in url:
             title = driver.find_element(By.CSS_SELECTOR, "h1._6EBuvT span.VU-ZEz").text.strip()
             price = driver.find_element(By.CSS_SELECTOR, "div.Nx9bqj").text.strip()
+            image = driver.find_element(By.CSS_SELECTOR, "img.DByuf4").get_attribute("src")
         
         if title and price:
-            return {"title": title, "price": price, "link": url}
+            return {"title": title, "price": price, "image":image, "link": url}
     except Exception as e:
         return None
     finally:
@@ -50,9 +53,9 @@ def google_search():
     top_results = list(search(query, num_results=5))
     print(top_results)
     products = []
-# "amazon" in link or
+#  "amazon" in link or 
     for link in top_results:
-        if "flipkart" in link:
+        if "flipkart" in link :
             product = scrape_product(link)
             if product:
                 products.append(product)
