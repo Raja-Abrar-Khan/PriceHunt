@@ -45,7 +45,8 @@ def scrape_product(url):
                 price = "Price not found"
             image = driver.find_element(By.CSS_SELECTOR, "#landingImage").get_attribute("src")
             # price = driver.execute_script("return document.querySelector('.a-price-whole')?.innerText;")
-
+            print(price)
+            print(image)
         elif "flipkart" in url:
             title = driver.find_element(By.CSS_SELECTOR, "h1._6EBuvT span.VU-ZEz").text.strip()
             price = driver.find_element(By.CSS_SELECTOR, "div.Nx9bqj").text.strip()
@@ -68,7 +69,7 @@ def google_search():
     if not query:
         return jsonify({"error": "No query provided"}), 400
 
-    top_results = list(search(query, num_results=5))
+    top_results = list(search(query, num_results=20))
     print(top_results)
     products = []
 #   
