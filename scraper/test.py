@@ -70,7 +70,7 @@ chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
 # Define the URL
-url = "https://www.amazon.in/Samsung-Galaxy-Smartphone-Yellow-Storage/dp/B0CS5ZZMN8"
+url = "https://www.amazon.com/SAMSUNG-Galaxy-S24-Version-128GB/dp/B0D364RMMP"
 
 # Load the web page
 driver.get(url)

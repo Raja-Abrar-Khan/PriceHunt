@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 import re 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 def scrape_product(url):
     """Scrape product title and price from Amazon or Flipkart"""
@@ -63,23 +63,29 @@ def scrape_product(url):
 
 @app.route("/search", methods=["POST"])
 def google_search():
+    print("Received request to /search")  # Log to confirm the route is hit
+    print("Request method:", request.method)  # Log the HTTP method
+    print("Request headers:", request.headers)  # Log the headers
+    print("Request data:", request.get_json())  # Log the request payload
+
     data = request.get_json()
     query = data.get("query")
+    print("Received query:", query)  # Log the query
 
     if not query:
         return jsonify({"error": "No query provided"}), 400
 
-    top_results = list(search(query, num_results=20))
-    print(top_results)
+    top_results = list(search(query, num_results=8))
+    print("Top results:", top_results)  # Log the top results
     products = []
-#   
+
     for link in top_results:
-        if "amazon" in link or "flipkart" in link :
+        if "amazon" in link or "flipkart" in link:
+            print("Scraping link:", link)  # Log the link being scraped
             product = scrape_product(link)
             if product:
                 products.append(product)
 
     return jsonify({"products": products})
-
 if __name__ == "__main__":
     app.run(debug=True)
