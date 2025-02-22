@@ -75,7 +75,7 @@ def google_search():
     if not query:
         return jsonify({"error": "No query provided"}), 400
 
-    top_results = list(search(query, num_results=8))
+    top_results = list(search(query, num_results=3))
     print("Top results:", top_results)  # Log the top results
     products = []
 

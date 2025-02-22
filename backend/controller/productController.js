@@ -57,15 +57,15 @@ export const getProduct = async (req, res) => {
             },
         });
         console.log("Response from Flask scraper:", response.data);
-        const scrapedProducts = response.data;
+        const scrapedProducts = response.data.products; // Access the 'products' key
 
         // Save scraped products to the database
         await prisma.product.createMany({
             data: scrapedProducts.map(product => ({
                 title: product.title,
-                url: product.title,
+                url: product.link, // Use 'link' instead of 'url' if that's what's returned
                 image: product.image,
-                currentPrice: product.currentPrice,
+                currentPrice: parseFloat(product.price.replace(/[^0-9.-]+/g, "")), // Convert price to float
                 lastUpdated: new Date(),
             })),
         });
